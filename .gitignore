@@ -1,0 +1,12 @@
+# Virtual Environment
+venv/
+__pycache__/
+
+# Environment variables (secrets)
+.env
+
+# Large model files (GitHub has a 100MB file limit)
+*.pt
+
+# Optional: Ignore uploaded user images
+uploads/

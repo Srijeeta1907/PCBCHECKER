@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCB Doctor | Inspection Workspace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base UI Reset & Theme (Matching home.html) */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: 'Rajdhani', sans-serif; 
+            color: #e2f1f8; 
+            background-color: #040d12;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at center, #09202a 0%, #020608 100%);
+            background-size: 50px 50px, 50px 50px, cover;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Holographic Glowing Navbar */
+        nav { 
+            background: rgba(4, 13, 18, 0.8); 
+            backdrop-filter: blur(10px);
+            padding: 15px 50px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.15);
+            z-index: 100;
+        }
+        
+        .logo { font-weight: 700; font-size: 1.5rem; color: #ffffff; text-decoration: none; letter-spacing: 2px; text-transform: uppercase; }
+        .logo span { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+        
+        .nav-links a { color: #8ebbc9; text-decoration: none; margin-left: 35px; font-weight: 600; font-size: 1.1rem; text-transform: uppercase; transition: all 0.3s ease; }
+        .nav-links a:hover, .nav-links a.active { color: #00ffff; text-shadow: 0 0 12px rgba(0, 255, 255, 0.8); }
+
+        /* Workspace Grid Layout */
+        .workspace {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            flex: 1;
+            height: calc(100vh - 70px);
+        }
+
+        /* Panels */
+        .panel {
+            background: rgba(4, 20, 28, 0.6);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.05);
+        }
+
+        .panel-title {
+            color: #00ffff;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 10px;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        }
+
+        /* Controls Panel */
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; color: #a4cddc; margin-bottom: 8px; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px;}
+        
+        select, input[type="file"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        select:focus, input[type="file"]:focus { border-color: #00ffff; box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
+
+        .btn-analyze {
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 12px;
+            width: 100%;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: auto;
+        }
+        .btn-analyze:hover:not(:disabled) {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        .btn-analyze:disabled {
+            border-color: #4a5568;
+            color: #4a5568;
+            cursor: not-allowed;
+        }
+
+        /* Viewer Panel (Central Canvas) */
+        .viewer-panel {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+        }
+
+        /* The canvas scales to fit the container while maintaining aspect ratio */
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+
+        /* Sci-Fi Scanning Animation Overlay */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #00ffff;
+            box-shadow: 0 0 15px 5px rgba(0, 255, 255, 0.5);
+            opacity: 0;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { top: 0; opacity: 1; }
+            90% { top: 100%; opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .scanning .scan-line { animation: scan 2s linear infinite; }
+
+        /* Results Panel */
+        .results-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .result-item {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 3px solid #ff3333;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 0 4px 4px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease forwards;
+        }
+        .result-item.pass {
+            background: rgba(0, 255, 0, 0.1);
+            border-left-color: #00ff00;
+        }
+        .defect-name { color: #fff; font-weight: 600; text-transform: uppercase; font-size: 0.9rem;}
+        .defect-conf { color: #a4cddc; font-size: 0.8rem; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .status-badge {
+            text-align: center;
+            padding: 15px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .status-fail { background: rgba(255, 51, 51, 0.2); border: 1px solid #ff3333; color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); display: block; }
+        .status-pass { background: rgba(0, 255, 0, 0.2); border: 1px solid #00ff00; color: #00ff00; text-shadow: 0 0 10px rgba(0, 255, 0, 0.5); display: block; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="/" class="logo">PCB<span>Doctor</span></a>
+        <div class="nav-links">
+            <a href="/">Overview</a>
+            <a href="/scanner" class="active">Inspection Workspace</a>
+        </div>
+    </nav>
+
+    <div class="workspace">
+        <div class="panel">
+            <h2 class="panel-title">Diagnostic Config</h2>
+            
+            <div class="control-group">
+                <label for="boardType">AI Brain Selection</label>
+                <select id="boardType">
+                    <option value="assembled">Fully Assembled PCBA</option>
+                    <option value="bare">Bare Copper Board</option>
+                    <option value="components">Components tracer</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="imageUpload">Capture / Upload Image</label>
+                <input type="file" id="imageUpload" accept="image/*" capture="environment">
+            </div>
+
+            <button id="analyzeBtn" class="btn-analyze" disabled>Initialize Scan</button>
+        </div>
+
+        <div class="panel viewer-panel" id="viewerPanel">
+            <div class="scan-line"></div>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title">Telemetry Data</h2>
+            
+            <div id="statusBadge" class="status-badge">Waiting...</div>
+            
+            <ul class="results-list" id="resultsList">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const boardType = document.getElementById('boardType');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const viewerPanel = document.getElementById('viewerPanel');
+        const resultsList = document.getElementById('resultsList');
+        const statusBadge = document.getElementById('statusBadge');
+
+        let currentImage = null;
+
+        // Handle Image Upload and Preview
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    ctx.drawImage(img, 0, 0);
+                    
+                    analyzeBtn.disabled = false;
+                    
+                    resultsList.innerHTML = '';
+                    statusBadge.style.display = 'none';
+                    statusBadge.className = 'status-badge';
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        // Handle Analysis Trigger
+        analyzeBtn.addEventListener('click', async () => {
+            const file = imageUpload.files[0];
+            if (!file) return;
+
+            // 1. UI Loading State
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerText = "Processing Telemetry...";
+            viewerPanel.classList.add('scanning');
+            resultsList.innerHTML = '';
+            statusBadge.style.display = 'none';
+
+            // Reset canvas to clear old bounding boxes
+            ctx.drawImage(currentImage, 0, 0);
+
+            // 2. Prepare data for FastAPI backend
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("board_type", boardType.value);
+
+            try {
+                // 3. Send to backend
+                // NEW: Changed to relative path so it works on phone IPs and ngrok!
+                const response = await fetch('/analyze-pcba', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                const data = await response.json();
+                console.log("Analysis Result:", data);
+
+                // 4. Process Results & Draw Bounding Boxes
+                viewerPanel.classList.remove('scanning');
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerText = "Initialize Scan";
+
+                if (data.defects_found === 0) {
+                    statusBadge.textContent = "BOARD PASSED";
+                    statusBadge.className = 'status-badge status-pass';
+                    resultsList.innerHTML = `<li class="result-item pass">
+                        <span class="defect-name">No anomalies detected</span>
+                    </li>`;
+                } else {
+                    statusBadge.textContent = `${data.defects_found} DEFECTS DETECTED`;
+                    statusBadge.className = 'status-badge status-fail';
+
+                    data.data.forEach(defect => {
+                        const { x1, y1, x2, y2 } = defect.bounding_box;
+                        const conf = (defect.confidence * 100).toFixed(1);
+                        
+                        // Draw Bounding Box
+                        ctx.strokeStyle = '#ff3333'; 
+                        ctx.lineWidth = Math.max(3, currentImage.width / 400); 
+                        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                        
+                        // Draw Background for Text
+                        ctx.fillStyle = 'rgba(255, 51, 51, 0.8)';
+                        const text = `${defect.defect_type} ${conf}%`;
+                        const fontSize = Math.max(16, currentImage.width / 40);
+                        ctx.font = `600 ${fontSize}px Rajdhani, sans-serif`;
+                        const textWidth = ctx.measureText(text).width;
+                        ctx.fillRect(x1, y1 - fontSize - 10, textWidth + 20, fontSize + 10);
+                        
+                        // Draw Text
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(text, x1 + 10, y1 - 10);
+
+                        // Add to Results Sidebar
+                        const li = document.createElement('li');
+                        li.className = 'result-item';
+                        li.innerHTML = `
+                            <span class="defect-name">${defect.defect_type}</span>
+                            <span class="defect-conf">${conf}% Conf</span>
+                        `;
+                        resultsList.appendChild(li);
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error during analysis:", error);
+                alert("Communication link failed. Check backend server.");
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerText = "Initialize Scan";
+                viewerPanel.classList.remove('scanning');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quality Dashboard</title>
+    <!-- Modern, highly readable font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            bg: '#0f172a',    
+                            card: '#1e293b',  
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        
+        /* Custom background with a dark overlay for text readability */
+        .hero-bg {
+            background-image: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.7)), 
+                              url('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Toggle switch styling */
+        .toggle-checkbox:checked { right: 0; border-color: #3b82f6; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col">
+
+    <!-- Simple Navigation -->
+    <nav class="bg-brand-card/90 backdrop-blur-md border-b border-brand-border px-8 py-4 flex justify-between items-center shadow-md sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-500 p-2 rounded-lg text-white">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <span class="text-xl font-bold text-white tracking-wide">Quality<span class="text-blue-400">Check</span></span>
+        </div>
+        <div class="flex gap-6 font-medium text-slate-400">
+            <a href="/" class="hover:text-white transition">Home</a>
+            <a href="/scanner" class="hover:text-white transition">Run Scanner</a>
+            <a href="/dashboard" class="text-blue-400 border-b-2 border-blue-400 pb-1">Dashboard</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Area with Background -->
+    <main class="flex-1 w-full hero-bg flex items-center justify-center p-8">
+        
+        <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            <!-- Left Side: Description -->
+            <div class="text-left space-y-8">
+                <div class="bg-blue-500/20 w-16 h-16 rounded-full flex items-center justify-center border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                    <i class="fa-solid fa-microscope text-3xl text-blue-400"></i>
+                </div>
+
+                <h1 class="text-4xl md:text-5xl font-bold text-white tracking-tight leading-tight">
+                    Automated <br> Quality Control
+                </h1>
+                
+                <p class="text-lg text-slate-300 leading-relaxed max-w-lg">
+                    QualityCheck acts as a highly advanced, AI-powered inspector for your electronics manufacturing line. Instantly analyze high-resolution images of circuit boards to detect microscopic errors before they leave the facility.
+                </p>
+
+                <div class="flex gap-4">
+                    <a href="/documentation" class="px-6 py-3 bg-slate-800/80 ...">
+    <i class="fa-solid fa-book"></i> Read Documentation
+</a>
+                </div>
+            </div>
+
+            <!-- Right Side: Clean UI Panel -->
+            <div class="bg-brand-card/80 backdrop-blur-md border border-brand-border/60 rounded-3xl p-6 shadow-2xl">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white">System Controls</h2>
+                    <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold border border-emerald-500/20 flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div> Online
+                    </span>
+                </div>
+
+                <!-- Mock Camera / Scanner View -->
+                <!-- Real Camera / Scanner View -->
+<div class="w-full h-64 bg-slate-900 border border-slate-700 rounded-2xl mb-6 relative overflow-hidden flex flex-col items-center justify-center group cursor-pointer hover:border-blue-500 transition" onclick="startCamera()">
+    
+    <!-- Hidden Video and Canvas elements for JavaScript to use -->
+    <video id="videoFeed" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline></video>
+    <canvas id="captureCanvas" class="hidden"></canvas>
+
+    <!-- Placeholder UI that disappears when camera starts -->
+    <div id="placeholderUI" class="flex flex-col items-center justify-center z-10 w-full h-full">
+        <!-- Scanner decorative lines -->
+        <div class="absolute inset-0 opacity-20 bg-[linear-gradient(rgba(59,130,246,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.5)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+        
+        <i class="fa-solid fa-camera-retro text-4xl text-slate-600 mb-3 group-hover:text-blue-400 transition"></i>
+        <p class="text-slate-500 font-medium group-hover:text-blue-300 transition">Click to initialize camera feed</p>
+    </div>
+</div>
+                <!-- UI Controls -->
+                <div class="space-y-4">
+                    <!-- Toggle Setting -->
+                    <div class="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                        <div>
+                            <p class="text-white font-medium">Auto-Scan Mode</p>
+                            <p class="text-xs text-slate-400">Trigger scan when board is detected</p>
+                        </div>
+                        <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="toggle1" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-slate-600 appearance-none cursor-pointer transition-all duration-300 z-10" checked/>
+                            <label for="toggle1" class="toggle-label block overflow-hidden h-6 rounded-full bg-blue-500 cursor-pointer"></label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <a href="/scanner" class="py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition shadow-lg flex justify-center items-center gap-2 text-sm">
+                            <i class="fa-solid fa-play"></i> Run Manual Scan
+                        </a>
+                        <button id="calibrateBtn" onclick="runCalibration()" class="py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl transition shadow-lg flex justify-center items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-arrows-to-circle"></i> <span id="calibrateText">Calibrate</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+<script>
+    let stream = null;
+    const video = document.getElementById('videoFeed');
+    const canvas = document.getElementById('captureCanvas');
+    const placeholder = document.getElementById('placeholderUI');
+    const scanBtn = document.getElementById('scanBtn');
+    const btnText = document.getElementById('btnText');
+
+    // 1. Initialize the Webcam
+    async function startCamera() {
+        if (stream) return; // Prevent multiple initializations
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment", width: 1280, height: 720 } 
+            });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            };
+        } catch (err) {
+            console.error("Camera Access Denied:", err);
+            alert("Please allow camera access to use the scanner.");
+        }
+    }
+
+    // 2. Capture Frame and Send to FastAPI
+    async function captureAndAnalyze() {
+        if (!stream) {
+            alert("Activate the camera feed first!");
+            return;
+        }
+
+        // Set canvas to match video resolution
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        // UI state: Processing
+        scanBtn.disabled = true;
+        btnText.innerText = "Analyzing...";
+
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('file', blob, 'pcb_capture.jpg');
+            formData.append('board_type', 'assembled'); // Matches your app.py logic
+
+            try {
+                const response = await fetch('/analyze-pcba', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                // Result Handling
+                if (result.defects_found > 0) {
+                    alert(`🚨 DETECTED: ${result.defects_found} defect(s) found!`);
+                } else {
+                    alert("✅ QC PASSED: No defects detected.");
+                }
+                console.log("AI Data:", result.data);
+
+            } catch (err) {
+                alert("Server Connection Error. Ensure FastAPI is running on port 8000.");
+            } finally {
+                scanBtn.disabled = false;
+                btnText.innerText = "Run Manual Scan";
+            }
+        }, 'image/jpeg', 0.90);
+    }
+
+    async function runCalibration() {
+        // Make sure the camera is actually running first
+        const video = document.getElementById('videoFeed');
+        if (!stream || video.classList.contains('hidden')) {
+            alert("Please click the camera area to initialize the live feed before calibrating.");
+            return;
+        }
+
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const calibrateText = document.getElementById('calibrateText');
+        const icon = calibrateBtn.querySelector('i');
+
+        // Update UI to show it is working
+        calibrateBtn.disabled = true;
+        calibrateText.innerText = "Calibrating...";
+        icon.className = "fa-solid fa-spinner fa-spin"; 
+
+        // Capture the current frame from the video feed
+        const canvas = document.getElementById('captureCanvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('file', blob, 'calibration_frame.jpg');
+
+            try {
+                // Send the image data to your backend
+const response = await fetch('/calibrate_endpoint', { // Make sure this matches your Flask route!
+    method: 'POST',
+    body: formData
+});
+
+if (response.ok) {
+    alert("✅ Calibration successful! Baseline environment saved.");
+} else {
+    throw new Error("Backend failed to process the image.");
+}
+
+            } catch (err) {
+                console.error("Calibration Error:", err);
+                alert("❌ Calibration failed. Check connection to the backend server.");
+            } finally {
+                // Reset the button UI back to normal
+                calibrateBtn.disabled = false;
+                calibrateText.innerText = "Calibrate";
+                icon.className = "fa-solid fa-arrows-to-circle";
+            }
+        }, 'image/jpeg', 0.90);
+    }
+    
+</script>
+<!-- FLOATING AI CHATBOT WIDGET -->
+<div id="ai-chat-widget" style="position: fixed; bottom: 20px; right: 20px; width: 300px; background: white; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000; display: flex; flex-direction: column;">
+    <!-- Header -->
+    <div style="background: #2c3e50; color: white; padding: 10px; border-radius: 10px 10px 0 0; font-weight: bold; text-align: center;">
+        PCB Doctor AI
+    </div>
+    
+    <!-- Chat History -->
+    <div id="chatbox" style="height: 250px; overflow-y: auto; padding: 10px; font-size: 14px; background: #f9f9f9;">
+        <p style="margin: 5px 0;"><strong>System:</strong> I am ready to help troubleshoot PCB defects.</p>
+    </div>
+    
+    <!-- Input Area -->
+    <div style="display: flex; padding: 10px; border-top: 1px solid #ccc;">
+        <input type="text" id="aiUserInput" placeholder="Ask about a defect..." style="flex: 1; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" onkeypress="if(event.key === 'Enter') sendChatMessage()" />
+        <button onclick="sendChatMessage()" style="margin-left: 5px; padding: 5px 10px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer;">Send</button>
+    </div>
+</div>
+
+<script>
+async function sendChatMessage() {
+    const inputField = document.getElementById("aiUserInput");
+    const chatbox = document.getElementById("chatbox");
+    const message = inputField.value.trim();
+    
+    if (!message) return;
+
+    // 1. Show user message
+    chatbox.innerHTML += `<p style="margin: 5px 0; color: #27ae60;"><strong>You:</strong> ${message}</p>`;
+    inputField.value = "";
+    chatbox.scrollTop = chatbox.scrollHeight;
+
+    // 2. Fetch from your new FastAPI route
+    try {
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_input: message, context: "No specific defect data passed yet." })
+        });
+        
+        const data = await response.json();
+        
+        // 3. Show AI response
+        chatbox.innerHTML += `<p style="margin: 5px 0; color: #2980b9;"><strong>AI:</strong> ${data.reply}</p>`;
+    } catch (error) {
+        chatbox.innerHTML += `<p style="margin: 5px 0; color: #c0392b;"><strong>Error:</strong> Failed to connect to server.</p>`;
+    }
+    
+    chatbox.scrollTop = chatbox.scrollHeight;
+}
+</script>
+</body>
+</html>

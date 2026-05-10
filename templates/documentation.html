@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QualityCheck - Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; }
+        .nav-blur { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="nav-blur border-b border-slate-700 px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-500 p-2 rounded-lg text-white">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <span class="text-xl font-bold text-white uppercase tracking-tight">QualityCheck</span>
+        </div>
+        <a href="/" class="text-slate-400 hover:text-white transition text-sm font-medium">Back to Dashboard</a>
+    </nav>
+
+    <main class="max-w-4xl mx-auto py-16 px-6">
+        <header class="mb-12">
+            <h1 class="text-4xl font-bold text-white mb-4">System Documentation</h1>
+            <p class="text-lg text-slate-400">Guide for operating the AI-powered PCB inspection system.</p>
+        </header>
+
+        <div class="space-y-12">
+            <section>
+                <h2 class="text-2xl font-semibold text-blue-400 mb-4 border-b border-slate-700 pb-2">1. Overview</h2>
+                <p class="leading-relaxed">
+                    QualityCheck utilizes a <strong>YOLO (You Only Look Once)</strong> deep learning architecture to identify defects in real-time. 
+                    The system is divided into two specialized "brains": one for <strong>Bare Boards</strong> (detecting copper-level flaws) 
+                    and one for <strong>Assembled Boards</strong> (detecting component placement errors).
+                </p>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-blue-400 mb-4 border-b border-slate-700 pb-2">2. How to Use</h2>
+                <ul class="list-disc pl-5 space-y-3">
+                    <li><strong>Upload Image:</strong> Select a high-resolution top-down photo of the PCB.</li>
+                    <li><strong>Select Model:</strong> Choose "Bare Board" for unpopulated PCBs or "Assembled" for finished products.</li>
+                    <li><strong>Analyze:</strong> The AI will return a list of detections with a confidence score and location boxes.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-blue-400 mb-4 border-b border-slate-700 pb-2">3. Defect Types</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                        <h4 class="text-white font-bold mb-1">Bare Board Faults</h4>
+                        <p class="text-sm">Detects: Short circuits, Open circuits, Spurious copper, and Mouse-bites.</p>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                        <h4 class="text-white font-bold mb-1">Assembled Faults</h4>
+                        <p class="text-sm">Detects: Missing components, Misaligned parts, and Solder bridges.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-blue-400 mb-4 border-b border-slate-700 pb-2">4. Reading the Analysis Documents</h2>
+                <p class="leading-relaxed mb-6">
+                    After the AI processes a PCB image, it generates an inspection document. Here is how to read and interpret the results:
+                </p>
+                
+                <div class="space-y-6">
+                    <div class="bg-slate-800/30 p-5 rounded-xl border border-slate-700/50 hover:border-blue-500/50 transition">
+                        <h3 class="text-white font-semibold text-lg mb-2"><i class="fa-solid fa-vector-square text-blue-500 mr-3"></i>Bounding Boxes</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            The visual document displays colored boxes around detected faults. Each box is labeled with the specific defect type (e.g., "Short", "Missing Component"). This allows you to instantly pinpoint the exact physical location of the error on the board.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/30 p-5 rounded-xl border border-slate-700/50 hover:border-blue-500/50 transition">
+                        <h3 class="text-white font-semibold text-lg mb-2"><i class="fa-solid fa-percent text-blue-500 mr-3"></i>Confidence Scores</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Next to each bounding box label is a percentage (e.g., 98%). This represents the AI model's certainty that the detection is accurate. Any score above your set threshold is flagged for review.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800/30 p-5 rounded-xl border border-slate-700/50 hover:border-blue-500/50 transition">
+                        <h3 class="text-white font-semibold text-lg mb-2"><i class="fa-solid fa-file-contract text-blue-500 mr-3"></i>Summary Reports</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            The system compiles a structured text document summarizing the total count of each defect type, the processing time, and a timestamp. This gives a quick, high-level overview of the board's overall health without needing to check every single visual box.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-blue-500/10 border border-blue-500/20 p-6 rounded-2xl">
+                <h2 class="text-xl font-semibold text-white mb-2"><i class="fa-solid fa-lightbulb mr-2"></i>Expert Tip</h2>
+                <p class="text-sm">
+                    For best results, ensure the lighting is even. Harsh shadows on a bare board can sometimes be misinterpreted by the AI as a trace defect. Use a white background for bare board scans.
+                </p>
+            </section>
+        </div>
+
+        <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-slate-500 text-sm">
+            &copy; 2026 QualityCheck AI Systems. All rights reserved.
+        </footer>
+    </main>
+
+</body>
+</html>

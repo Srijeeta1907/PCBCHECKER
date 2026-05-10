@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Camera Scanner - QualityCheck</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #cbd5e1; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <nav class="bg-slate-900 border-b border-slate-700 px-8 py-4 flex justify-between items-center shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-500 p-2 rounded-lg text-white">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <span class="text-xl font-bold text-white tracking-wide">Quality<span class="text-blue-400">Check</span></span>
+        </div>
+        <div class="flex gap-6 font-medium text-slate-400">
+            <a href="/" class="hover:text-white transition">Dashboard</a>
+            <a href="/scanner" class="hover:text-white transition">File Upload</a>
+            <a href="/camera" class="text-blue-400 border-b-2 border-blue-400 pb-1">Live Camera</a>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-8 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <div class="lg:col-span-2 flex flex-col gap-4">
+            <h2 class="text-2xl font-bold text-white">Live Inspection Feed</h2>
+            
+            <div class="relative w-full bg-black rounded-2xl overflow-hidden border border-slate-700 shadow-2xl aspect-video flex items-center justify-center group">
+                
+                <video id="webcam" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline></video>
+                
+                <canvas id="overlay" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+                <div id="placeholder" class="text-center z-10 cursor-pointer" onclick="startCamera()">
+                    <i class="fa-solid fa-power-off text-5xl text-slate-600 mb-4 group-hover:text-blue-400 transition"></i>
+                    <p class="text-slate-400 font-medium">Click to Turn On Camera</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col gap-6">
+            <h3 class="text-xl font-bold text-white border-b border-slate-700 pb-3">Scanner Controls</h3>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-400 mb-2">Select Board Type</label>
+                <select id="boardType" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="assembled">Standard Assembled</option>
+                    <option value="bare">Bare Board</option>
+                </select>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <p class="text-white font-medium">Auto-Scan Mode</p>
+                    <p class="text-xs text-slate-400">Trigger scan continuously</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="autoScanToggle" class="sr-only peer" disabled>
+                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+
+            <button id="scanBtn" onclick="captureAndScan()" disabled class="w-full py-4 bg-blue-600 disabled:bg-slate-700 disabled:text-slate-500 hover:bg-blue-500 text-white font-bold rounded-xl transition shadow-lg flex justify-center items-center gap-2">
+                <i class="fa-solid fa-crosshairs"></i> Run Scan
+            </button>
+
+            <div class="mt-4 flex-1">
+                <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Scan Results</h4>
+                <div id="resultsBox" class="bg-slate-900 rounded-lg p-4 border border-slate-700 h-48 overflow-y-auto text-sm text-slate-300 font-mono">
+                    Awaiting scan...
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const overlay = document.getElementById('overlay');
+        const placeholder = document.getElementById('placeholder');
+        const scanBtn = document.getElementById('scanBtn');
+        const resultsBox = document.getElementById('resultsBox');
+        const autoScanToggle = document.getElementById('autoScanToggle');
+        let ctx = overlay.getContext('2d');
+        
+        let isAutoScanning = false; 
+        let scanInProgress = false; // Add a lock to prevent sending frames too fast
+
+        // 1. Turn on the Webcam
+        async function startCamera() {
+            try {
+                // facingMode: "environment" prefers the rear camera on phones
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "environment" } });
+                video.srcObject = stream;
+                
+                placeholder.classList.add('hidden');
+                video.classList.remove('hidden');
+                scanBtn.disabled = false;
+
+                video.onloadedmetadata = () => {
+                    video.play(); // Explicitly tell video to play
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
+                    autoScanToggle.disabled = false; 
+                };
+            } catch (err) {
+                alert("Could not access camera. Please check your browser permissions.");
+                console.error(err);
+            }
+        }
+
+        // 2. The Core Function: Grab frame, send to Python, draw results
+        async function runSingleScan(isManualClick) {
+            // Prevent multiple scans from happening at the exact same time
+            if (scanInProgress) return;
+            scanInProgress = true;
+
+            if (isManualClick) {
+                scanBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...';
+                scanBtn.disabled = true;
+            }
+
+            ctx.clearRect(0, 0, overlay.width, overlay.height); 
+
+            // Grab the frame
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempCanvas.getContext('2d').drawImage(video, 0, 0);
+
+            const base64Image = tempCanvas.toDataURL('image/jpeg', 0.8);
+            const boardType = document.getElementById('boardType').value;
+
+            const formData = new FormData();
+            formData.append('frame_data', base64Image);
+            formData.append('board_type', boardType);
+
+            try {
+                // Send to Python
+                const response = await fetch('/analyze-frame', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                resultsBox.innerHTML = `<span class="text-rose-400">Error connecting to AI server. Check console.</span>`;
+                console.error("Scan Error:", error);
+            } finally {
+                // Unlock the scanner
+                scanInProgress = false;
+                
+                if (isManualClick) {
+                    scanBtn.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Run Scan';
+                    scanBtn.disabled = false;
+                } else if (isAutoScanning) {
+                    // If we are in auto-mode, wait 1 second and then run again
+                    setTimeout(() => { runSingleScan(false); }, 1000);
+                }
+            }
+        }
+
+        // Connect the Manual Button
+        function captureAndScan() {
+            runSingleScan(true);
+        }
+
+        // 3. Display Bounding Boxes and Text Results
+        function displayResults(data) {
+            if (data.status === "error") {
+                resultsBox.innerHTML = `<span class="text-rose-400">${data.message}</span>`;
+                return;
+            }
+
+            resultsBox.innerHTML = `Status: <span class="text-emerald-400">Success</span><br>`;
+            resultsBox.innerHTML += `Defects Found: <span class="${data.defects_found > 0 ? 'text-rose-400' : 'text-emerald-400'} font-bold">${data.defects_found}</span><br><br>`;
+
+            if (data.defects_found === 0) {
+                resultsBox.innerHTML += "Board passes inspection.";
+                return;
+            }
+
+            data.data.forEach((item, index) => {
+                const box = item.bounding_box;
+                
+                ctx.strokeStyle = '#ef4444'; 
+                ctx.lineWidth = 3;
+                ctx.strokeRect(box.x1, box.y1, box.x2 - box.x1, box.y2 - box.y1);
+
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(box.x1, box.y1 - 25, ctx.measureText(item.defect_type).width + 60, 25);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Inter';
+                ctx.fillText(`${item.defect_type} (${item.confidence})`, box.x1 + 5, box.y1 - 7);
+
+                resultsBox.innerHTML += `[${index + 1}] ${item.defect_type} (Conf: ${item.confidence})<br>`;
+            });
+        }
+
+        // 4. Toggle Switch Logic
+        autoScanToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                // TURN ON
+                isAutoScanning = true;
+                scanBtn.disabled = true; 
+                resultsBox.innerHTML = '<span class="text-blue-400"><i class="fa-solid fa-spinner fa-spin"></i> Auto-scanning active...</span>';
+                
+                // Start the continuous loop (pass false because it's not a manual click)
+                runSingleScan(false); 
+            } else {
+                // TURN OFF
+                isAutoScanning = false;
+                scanBtn.disabled = false; 
+                ctx.clearRect(0, 0, overlay.width, overlay.height); 
+                resultsBox.innerHTML = 'Auto-scan stopped. Ready for manual scan.';
+            }
+        });
+
+    </script>
+</body>
+</html>
