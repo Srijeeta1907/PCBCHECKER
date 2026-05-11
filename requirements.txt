@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
+anthropic
+opencv-python-headless
+Pillow
+requests
+aiofiles
+python-dotenv
