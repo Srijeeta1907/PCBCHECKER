@@ -8,3 +8,4 @@ Pillow
 requests
 aiofiles
 python-dotenv
+gunicorn
