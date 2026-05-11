@@ -1,7 +1,9 @@
 from pydantic import BaseModel
-from google import genai
+from groq import Groq          # pip install groq
 import os
-from httpcore import Response
+from dotenv import load_dotenv
+load_dotenv()
+from fastapi import Response
 
 from fastapi import FastAPI, UploadFile, File, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,16 +25,25 @@ def new_func():
 app = new_func()
 templates = Jinja2Templates(directory="templates")
 
+# ─────────────────────────────────────────────────────
+#  Groq Client  (100% Free — 14,400 requests/day)
+#  Get free key: https://console.groq.com/keys
+# ─────────────────────────────────────────────────────
 try:
-    gemini_client = genai.Client()
+    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    print("✅ Groq AI client initialized successfully.")
 except Exception as e:
-    print("WARNING: Could not initialize Gemini. Make sure GEMINI_API_KEY is set.")
-    gemini_client = None
+    print(f"WARNING: Could not initialize Groq client: {e}")
+    groq_client = None
+
+GROQ_MODEL = "llama-3.3-70b-versatile"   # Free, fast, very capable
+
 
 # Define the structure for incoming chat messages
 class ChatMessage(BaseModel):
     user_input: str
-    context: str = "" # We can use this later to pass YOLO detection results!
+    context: str = ""
+
 class DoctorRequest(BaseModel):
     defect_type: str
     board_type: str
@@ -47,9 +58,9 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-# Load Models (Make sure names match your sidebar!)
-model_assembled = YOLO("qcba_inspector.pt")
-model_bare = YOLO("best 1.pt") # Updated to your confirmed working model
+# Load Models
+model_assembled  = YOLO("qcba_inspector.pt")
+model_bare       = YOLO("best 1.pt")
 model_components = YOLO("model_inspector.pt")
 
 # --- ROUTES ---
@@ -76,15 +87,13 @@ async def camera_page(request: Request):
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    # Returns a blank response so the browser stops throwing a 404
     return Response(content="", media_type="image/x-icon")
 
 # --- AI LOGIC ---
 
-# Endpoint that accepts a base64 frame snapshot from the browser (Webcam)
 @app.post("/analyze-frame")
 async def analyze_frame(
-    frame_data: str = Form(...),        
+    frame_data: str = Form(...),
     board_type: str = Form(default="assembled")
 ):
     print(f"\n--- CAMERA FRAME SCAN ---")
@@ -104,9 +113,7 @@ async def analyze_frame(
     except Exception as e:
         return {"status": "error", "message": f"Frame decode failed: {str(e)}"}
 
-    # 🚨 FIX APPLIED: Removed cvtColor. YOLO automatically handles the BGR array.
     if board_type == "bare":
-        # Pass 'img' directly, just like the test script
         results = model_bare.predict(source=img, imgsz=1024, conf=0.25)
         class_names = model_bare.names
     else:
@@ -139,7 +146,6 @@ async def analyze_frame(
     }
 
 
-# Endpoint for File Uploads
 @app.post("/analyze-pcba")
 async def analyze_pcba(file: UploadFile = File(...), board_type: str = Form(default="assembled")):
     print(f"\n--- NEW FILE SCAN STARTED ---")
@@ -149,11 +155,9 @@ async def analyze_pcba(file: UploadFile = File(...), board_type: str = Form(defa
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # 🚨 FIX APPLIED: Removed cvtColor. 
-    cv2.imwrite("debug_before_ai.jpg", img) # Still saving for debugging just in case
+    cv2.imwrite("debug_before_ai.jpg", img)
 
     if board_type == "bare":
-        # Pass 'img' directly
         results = model_bare.predict(source=img, imgsz=1024, conf=0.25)
         class_names = model_bare.names
     else:
@@ -176,6 +180,7 @@ async def analyze_pcba(file: UploadFile = File(...), board_type: str = Form(defa
 
     return {"status": "success", "board_analyzed": board_type, "defects_found": len(detections), "data": detections}
 
+
 @app.post("/calibrate_endpoint")
 async def save_calibration(file: UploadFile = File(...)):
     print("\n--- CALIBRATION FRAME RECEIVED ---")
@@ -184,45 +189,49 @@ async def save_calibration(file: UploadFile = File(...)):
         save_path = "baseline_environment.jpg"
         with open(save_path, "wb") as f:
             f.write(contents)
-            
         print(f"DEBUG: Successfully saved to {save_path}")
         return {"status": "success", "message": "Baseline saved successfully"}
-        
     except Exception as e:
         print(f"ERROR saving calibration: {e}")
         return {"status": "error", "message": str(e)}
-    
+
+
 # --- AI CHATBOT ROUTE ---
 @app.post("/api/chat")
 async def chat_assistant(message: ChatMessage):
-    if not gemini_client:
-        return {"reply": "Error: AI backend is offline. Missing API key."}
-
-    # We inject system instructions to make it act like a PCB expert
-    system_prompt = f"""You are 'PCB Doctor AI', an expert engineering assistant built into a PCB scanning web app. 
-    Help the user troubleshoot circuit board manufacturing defects. Be concise and technical.
-    
-    Current UI Context: {message.context}
-    
-    User Question: {message.user_input}"""
+    if not groq_client:
+        return {"reply": "Error: AI backend is offline. Missing GROQ_API_KEY in .env file."}
 
     try:
-        response = gemini_client.models.generate_content(
-            model="gemini-3-flash", 
-            contents=system_prompt
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are 'PCB Doctor AI', an expert engineering assistant built into a PCB scanning web app. "
+                        "Help the user troubleshoot circuit board manufacturing defects. Be concise and technical.\n\n"
+                        f"Current UI Context: {message.context}"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": message.user_input
+                }
+            ]
         )
-        return {"reply": response.text}
+        return {"reply": response.choices[0].message.content}
     except Exception as e:
-        return {"reply": f"Error connecting to AI: {str(e)}"}    
-    
+        return {"reply": f"Error connecting to AI: {str(e)}"}
+
+
 @app.post("/ask-doctor")
 async def ask_doctor_endpoint(req: DoctorRequest):
-    if not gemini_client:
-        return {"status": "error", "message": "AI backend offline. Missing API key."}
+    if not groq_client:
+        return {"status": "error", "message": "AI backend offline. Missing GROQ_API_KEY in .env file."}
 
-    # Prompt engineering specifically for this defect diagnosis
     prompt = f"""
-    You are 'PCB Doctor AI', an expert hardware engineering assistant.
     The YOLO vision model just scanned a {req.board_type} circuit board.
     It detected the following defect: {req.defect_type}.
     
@@ -231,22 +240,31 @@ async def ask_doctor_endpoint(req: DoctorRequest):
     """
 
     try:
-        response = gemini_client.models.generate_content(
-            model="gemini-3-flash", 
-            contents=prompt
+        response = groq_client.chat.completions.create(
+            model=GROQ_MODEL,
+            max_tokens=512,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are 'PCB Doctor AI', an expert hardware engineering assistant specialising in PCB manufacturing defects."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
         )
-        
-        # Your JS uses innerHTML, so we convert markdown line breaks to HTML breaks
-        formatted_advice = response.text.replace('\n', '<br>')
-        
+
+        formatted_advice = response.choices[0].message.content.replace('\n', '<br>')
+
         return {
-            "status": "success", 
-            "defect": req.defect_type, 
+            "status": "success",
+            "defect": req.defect_type,
             "advice": formatted_advice
         }
-        
     except Exception as e:
         return {"status": "error", "message": str(e)}
-    
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8080)
